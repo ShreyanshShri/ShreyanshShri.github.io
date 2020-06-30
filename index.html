@@ -1,0 +1,165 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    
+    <!-- links to leaflet.js -->
+    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.6.0/dist/leaflet.css"
+    integrity="sha512-xwE/Az9zrjBIphAcBb3F6JVqxf46+CDLwfLMHloNu6KEQCAWi6HcDUbeOfBIptF7tcCzusKFjFw2yuvEpDL9wQ=="
+    crossorigin=""/>
+    <script src="https://unpkg.com/leaflet@1.6.0/dist/leaflet.js"
+    integrity="sha512-gZwIG9x3wUXg2hdXF6+rVkLF/0Vi9U8D2Ntg4Ga5I5BZpVkVxlJWbSQtXPSiUTtC0TjtGOmxa1AJPuV0CPthew=="
+    crossorigin=""></script>
+
+<!-- firebase links -->
+<script src="https://www.gstatic.com/firebasejs/7.15.5/firebase.js"></script>
+
+
+<!-- bootsrap links -->
+<link rel="stylesheet" href="https://stackpath.bootstrapcdn.com/bootstrap/4.5.0/css/bootstrap.min.css" integrity="sha384-9aIt2nRpC12Uk9gS9baDl411NQApFmC26EwAOH8WgZl5MYYxFfc+NcPb1dKGj7Sk" crossorigin="anonymous">
+<link href="https://fonts.googleapis.com/css2?family=Roboto:ital@0;1&display=swap" rel="stylesheet">
+
+<title>Make Friends Online</title>
+    <style>
+        body{
+            padding: 0;
+            margin: 0;
+            box-sizing: border-box;
+            background: linear-gradient(60deg,#e66465, #9198e5) no-repeat center center fixed;
+            -webkit-background-size: cover;
+            -moz-background-size: cover;
+            -o-background-size: cover;
+            background-size: cover;
+            font-family: 'Roboto', sans-serif;
+            color: blueviolet;
+        }
+        h1{
+            color: blueviolet;
+        }
+        #mapid { 
+            height: 60vh; 
+            margin-top: 6vh;
+            display: none;
+        }
+        .center{
+            margin-left: 50%;
+            transform: translateX(-50%);
+        }
+        #form{
+            padding: 8%;
+            margin-top: 30%;
+            transform: translateY(-50%);
+        }
+    </style>
+</head>
+<body>
+    <div class="container mt-4">
+        <i><h1 align="center">Search Friends NearBy</h1></i>
+    <div id="form">
+        <form action="#" method="dialog" onsubmit="getData()" class="form">
+            <label for="username" class="label-primary">Enter Your Name</label>
+            <input type="text" name="username" id="username" required class="form-control">
+            <button type="submit" class="btn btn-primary my-2 center">Submit</button>
+        </form>
+    </div>
+    <div id="mapid"></div>
+</div>
+    <script>
+        //maing global vars and funtions
+        let lat, lon, accuracy;
+
+
+// setting up the map
+    var mymap = L.map('mapid').setView([20, 80], 4);;
+    const attribution = 'Map data &copy; <a href="https://www.openstreetmap.org/">OpenStreetMap</a> contributors, <a href="https://creativecommons.org/licenses/by-sa/2.0/">CC-BY-SA</a>, Imagery © <a href="https://www.mapbox.com/">Mapbox</a>';
+    const tileUrl = 'https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png';
+    var tiles = L.tileLayer(tileUrl, { attribution });
+    tiles.addTo(mymap)
+
+  //firebase configs
+  var firebaseConfig = {
+    apiKey: "AIzaSyBSiDCLFPGAU1U7npW_PWuaayWWYnV6RfI",
+    authDomain: "geolocation-test-84c26.firebaseapp.com",
+    databaseURL: "https://geolocation-test-84c26.firebaseio.com",
+    projectId: "geolocation-test-84c26",
+    storageBucket: "geolocation-test-84c26.appspot.com",
+    messagingSenderId: "746288113133",
+    appId: "1:746288113133:web:4e20dc4388555c6d3933e4"
+  };
+  // Initialize Firebase
+  firebase.initializeApp(firebaseConfig);
+
+  firebase.database().ref("users/").on("value",data=>{
+
+    Object.keys(data.val()).forEach(k=>{
+        console.log(k)
+        updateData(k);
+
+        L.marker([ data.val()[k].lat, data.val()[k].lon ]).addTo(mymap)
+                .bindPopup(data.val()[k].user)
+                .openPopup();
+                var circle = L.circle([data.val()[k].lat, data.val()[k].lon ], {
+                    color: 'red',
+                    fillColor: '#f03',
+                    fillOpacity: 0.5,
+                    radius: data.val()[k].accuracy
+                }).addTo(mymap);
+
+    })
+    })
+// ${data.val()[k].username
+
+
+//geolocating the user
+function getData(){        
+    if(!navigator.geolocation) {
+                console.log("geoLocation not supported")
+            } else {
+                navigator.geolocation.getCurrentPosition(position => {
+                console.log(position)
+                lat = position.coords.latitude;
+                lon = position.coords.longitude;
+                accuracy = position.coords.accuracy;
+
+                L.marker([position.coords.latitude, position.coords.longitude]).addTo(mymap)
+                .bindPopup(document.getElementById("username").value)
+                .openPopup();
+                var circle = L.circle([position.coords.latitude, position.coords.longitude], {
+                    color: 'red',
+                    fillColor: '#f03',
+                    fillOpacity: 0.5,
+                    radius: position.coords.accuracy
+                }).addTo(mymap);
+            
+                const database = firebase.database();
+                database.ref('users/').push({
+                    user : document.getElementById("username").value,
+                    lat : position.coords.latitude,
+                    lon : position.coords.longitude,
+                    accuracy : position.coords.accuracy
+                })
+
+            });
+            document.getElementById("mapid").style.display = "block";
+            document.getElementById("form").style.display = "none";
+            }
+}
+function updateData(child){
+    if(!navigator.geolocation) console.log("geolocation not supported")
+    navigator.geolocation.getCurrentPosition(position =>{
+    lat= position.coords.latitude
+    lon = position.coords.longitude
+    accuracy = position.coords.accuracy
+    let ref = firebase.database().ref("users/").child(child);
+    ref.update({
+        lat : lat,
+        lon : lon,
+        accuracy : accuracy
+    })
+})
+}
+  //manipulating doms
+    </script>
+</body>
+</html>
